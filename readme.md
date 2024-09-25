@@ -84,19 +84,17 @@ Install the dependencies:
 bash
 Copy code
 pip install -r requirements.txt
-Set up MongoDB:
 
-Create a MongoDB Atlas account if you don’t have one.
-Set up a database named chatbot_db and a collection named conversation.
-Make sure to replace the MONGODB_URI in your .env file with your own MongoDB connection string.
-Set up environment variables:
+## Set up MongoDB:
 
-Create a .env file in the project root directory with the values as shown in the .env Configuration section.
-How to Run the Project Locally
-Run Streamlit:
+### Create a MongoDB Atlas account if you don’t have one.
+- Set up a database named chatbot_db and a collection named conversation.
+- Make sure to replace the MONGODB_URI in your .env file with your own MongoDB connection string.
+- Set up environment variables:
+
+- Create a .env file in the project root directory with the values as shown in the .env Configuration section.
 
 ## Use the following command to start the Streamlit app:
 
 bash
-Copy code
 streamlit run app.py
