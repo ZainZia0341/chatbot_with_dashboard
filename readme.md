@@ -11,7 +11,6 @@ This repository contains a Chatbot that uses Streamlit for the frontend, LangCha
 - [Environment Variables (.env) Configuration](#environment-variables-env-configuration)
 - [How to Set Up the Project](#how-to-set-up-the-project)
 - [How to Run the Project Locally](#how-to-run-the-project-locally)
-- [Deploying on Hugging Face Spaces](#deploying-on-hugging-face-spaces)
 
 ---
 
@@ -62,28 +61,25 @@ This project is a Chatbot that lets users interact with an AI-based assistant us
 
 ## Environment Variables (.env) Configuration
 
-The `.env` file is essential for configuring your environment. You should create this file in the root directory of the project. Below is a sample of what it should contain:
+### The `.env` file is essential for configuring your environment. You should create this file in the root directory of the project. Below is a sample of what it should contain:
 
-```plaintext
-# MongoDB connection string
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority
+- MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority
 
-# OpenAI API Key
-OPENAI_API_KEY=<your_openai_api_key>
+- OPENAI_API_KEY=<your_openai_api_key>
 
-# LangChain Project Name
-LANGCHAIN_PROJECT=<your_langchain_project_name>
+- LANGCHAIN_PROJECT=<your_langchain_project_name>
 
-How to Set Up the Project
+
+## How to Set Up the Project
 Clone the repository:
 
 bash
 Copy code
-git clone https://github.com/<your-username>/Chatbot_Dashboard.git
+git clone https://github.com/zainzia0341/Chatbot_Dashboard.git
 cd Chatbot_Dashboard
 Install the dependencies:
 
-Ensure you have Python installed, preferably version 3.9.x, and then install the required dependencies using pip:
+### Ensure you have Python installed, preferably version 3.9.x, and then install the required dependencies using pip:
 
 bash
 Copy code
@@ -99,7 +95,7 @@ Create a .env file in the project root directory with the values as shown in the
 How to Run the Project Locally
 Run Streamlit:
 
-Use the following command to start the Streamlit app:
+## Use the following command to start the Streamlit app:
 
 bash
 Copy code
