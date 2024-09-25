@@ -1,0 +1,13 @@
+.env
+
+ENV_3.9.0
+
+chroma_db
+
+working_conversations
+
+working_files
+
+working_session_id
+
+Working_UI
