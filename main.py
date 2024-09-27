@@ -1,4 +1,6 @@
-# app.py
+import os
+from dotenv import load_dotenv
+from chroma_init import  initialize_chroma
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -6,15 +8,14 @@ from langchain.chains import create_retrieval_chain, create_history_aware_retrie
 from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
-from chroma_init import initialize_chroma
-import os
-from dotenv import load_dotenv
+import fitz  # PyMuPDF for PDF processing
+from langchain.schema import Document
+
 load_dotenv()
 
-
-os.environ["LANGCHAIN_TRACING_V2"]="true"
-os.environ["LANGCHAIN_API_KEY"]=os.getenv("LANGCHAIN_API_KEY")
-LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT")
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+PERSIST_DIR = './chroma_db'
 
 # MongoDB connection settings
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -22,12 +23,39 @@ DB_NAME = "chatbot_db"
 COLLECTION_NAME = "conversation"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Load default PDF file
+DEFAULT_PDF_PATH = './default_document.pdf'
 
-# Initialize vectorstore
-vectorstore = initialize_chroma()
+def load_pdf_content(pdf_path):
+    """Load text content from a PDF file."""
+    doc = fitz.open(pdf_path)
+    text = ""
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        text += page.get_text("text")
+    return text
+
+# Load the default PDF without splitting since it's small
+def process_default_pdf_to_splits():
+    if os.path.exists(DEFAULT_PDF_PATH):
+        print(f"Loading default PDF: {DEFAULT_PDF_PATH}")
+        pdf_text = load_pdf_content(DEFAULT_PDF_PATH)
+        # We don't split the text if the document is small
+        return [Document(page_content=pdf_text, metadata={"file_name": "default_document.pdf"})]
+    else:
+        print("Default PDF not found. Skipping loading default PDF.")
+        return None
+    
+# Process the default PDF for ChromaDB
+
+# Initialize vectorstore with default PDF content if no user-uploaded files
+default_splits = process_default_pdf_to_splits()
+
+# Initialize vectorstore with default PDF content if no user-uploaded files
+initialize_chroma(splits=default_splits)
 
 # Core LLM setup
-llm = ChatOpenAI(model="gpt-4o-mini", api_key = OPENAI_API_KEY)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
 
 def get_session_history(session_id: str) -> MongoDBChatMessageHistory:
     """Retrieve the chat history stored in MongoDB"""
@@ -40,7 +68,7 @@ def get_session_history(session_id: str) -> MongoDBChatMessageHistory:
 
 def create_rag_chain():
     # Create retriever from Chroma
-    retriever = vectorstore.as_retriever()
+    retriever = initialize_chroma().as_retriever()
 
     # Define prompt templates
     system_prompt = (
@@ -53,12 +81,11 @@ def create_rag_chain():
     )
 
     retriever_prompt = (
-    "Given a chat history and the latest user question which might reference context in the chat history,"
-    "formulate a standalone question which can be understood without the chat history."
-    "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
-)
+        "Given a chat history and the latest user question which might reference context in the chat history,"
+        "formulate a standalone question which can be understood without the chat history."
+        "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+    )
    
-    
     # History-aware retriever
     contextualize_q_prompt = ChatPromptTemplate.from_messages([
         ("system", retriever_prompt),

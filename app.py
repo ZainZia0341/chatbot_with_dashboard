@@ -1,38 +1,47 @@
 import streamlit as st
 from main import invoke_rag_chain
 from session_manager import generate_new_session_id
-from langchain_core.messages import AIMessage, HumanMessage
 from mongodb import save_conversation, load_conversations, delete_conversation
-from dashboard import get_conversation_stats, plot_token_usage, plot_sentiment, get_token_usage_from_langsmith
-from langsmith import Client
+from dashboard import display_dashboard
+from chroma_init import push_files_to_chroma, list_uploaded_files, delete_uploaded_file, save_uploaded_file
 import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Set LangChain tracing and API keys
+# Load environment variables
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT")
 
 # Initialize session state
 if 'page' not in st.session_state:
     st.session_state['page'] = 'conversation'
 
-# Main layout - two columns: one narrow for conversation buttons, one wider for chatbot UI
-col1, col2 = st.columns([2, 3])  # col1 (2 units) and col2 (3 units)
+# Main layout - two columns: move the file uploader to the left side
+col1, col2 = st.columns([2, 3])
 
-# Inside col1, create two equal buttons
+# Inside col1: File uploader and conversation buttons (left side)
 with col1:
-    col3, col4 = st.columns(2)  # Two equal columns inside col1
+    st.header("Upload Files for RAG")
+    uploaded_files = st.file_uploader("Upload your .txt or .pdf files", type=['txt', 'pdf'], accept_multiple_files=True)
 
-    # Button 1: Conversation
+    if st.button("Push Files for RAG"):
+        file_names = [save_uploaded_file(file) for file in uploaded_files]
+        push_files_to_chroma(file_names)
+
+    # Show uploaded files
+    st.subheader("Uploaded Files:")
+    uploaded_files_list = list_uploaded_files()
+    if uploaded_files_list:
+        for file_name in uploaded_files_list:
+            if st.button(f"Delete {file_name}"):
+                delete_uploaded_file(file_name)
+
+    col3, col4 = st.columns(2)
+
+    # Conversation Button
     with col3:
         if st.button("Conversation"):
             st.session_state['page'] = 'conversation'
 
-    # Button 2: Dashboard
+    # Dashboard Button
     with col4:
         if st.button("Dashboard"):
             st.session_state['page'] = 'dashboard'
@@ -73,25 +82,19 @@ with col1:
                 st.session_state['active_session_id'] = new_session_id
                 st.session_state['conversations'][new_session_id] = []
 
-# Inside col2: Main conversation/chatbot UI
+# Inside col2: Main conversation/chatbot UI (on the right)
 with col2:
     if st.session_state['page'] == 'conversation':
-        # Chatbot UI
         st.header("Chat with the Assistant")
-
-        # Input box for the user's question
         user_input = st.text_input("Ask a question:")
+
         if st.button("Send"):
             if user_input:
-                # Invoke the RAG chain
                 answer, full_chat_history = invoke_rag_chain(user_input, st.session_state['active_session_id'])
-                
-                # Save user's message and AI's response to the conversation history
                 st.session_state['conversations'][st.session_state['active_session_id']].append({"role": "User", "content": user_input})
                 st.session_state['conversations'][st.session_state['active_session_id']].append({"role": "AI", "content": answer})
                 save_conversation(st.session_state['active_session_id'], st.session_state['conversations'][st.session_state['active_session_id']])
 
-        # Display the conversation history
         if st.session_state['active_session_id'] in st.session_state['conversations']:
             for message in st.session_state['conversations'][st.session_state['active_session_id']]:
                 if message['role'] == "AI":
@@ -100,26 +103,4 @@ with col2:
                     st.markdown(f"<div style='color:green;'>User: {message['content']}</div>", unsafe_allow_html=True)
 
     elif st.session_state['page'] == 'dashboard':
-        # Dashboard UI
-        st.header("Dashboard Analytics")
-
-        # Get conversation stats including token usage
-        stats = get_conversation_stats()
-
-        # Display total conversations and total tokens used
-        st.write(f"Total Conversations: {stats['total_conversations']}")
-        st.write(f"Total Tokens Used: {stats['total_tokens_used']}")
-
-        # Display token usage per conversation
-        st.subheader("Token Usage per Conversation")
-        plot_token_usage(stats['token_usage_per_conversation'])
-
-        # Display sentiment analysis per conversation
-        st.subheader("Sentiment Analysis per Conversation")
-        plot_sentiment(stats['sentiment_per_conversation'])
-
-        # Display token usage from LangSmith
-        st.subheader("Token Usage from LangSmith API")
-        token_usage_data = get_token_usage_from_langsmith()
-        st.write(token_usage_data)
-
+        display_dashboard()  # Dashboard UI
